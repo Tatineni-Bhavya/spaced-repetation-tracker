@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.13",
+    "puppeteer": "^24.15.0",
+    "twilio": "^5.8.0"
+  }
+}
