@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - spaced-repetation-tracker-Bhavya
+name: Build and deploy Node.js app to Azure Web App - spaced-repetation-tracker-bhavya-cha9epfab9h8dpg
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'spaced-repetation-tracker-Bhavya'
+          app-name: 'spaced-repetation-tracker-bhavya-cha9epfab9h8dpg'
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F863BF89C9444A39828EED9EF69F5147 }}
