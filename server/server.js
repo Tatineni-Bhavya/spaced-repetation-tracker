@@ -1,12 +1,41 @@
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const twilio = require('twilio');
 const sgMail = require('@sendgrid/mail');
 const cors = require('cors');
+const { MongoClient } = require('mongodb');
+
+// MongoDB setup
+const MONGO_URI = process.env.MONGO_URI;
+let db;
+
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Connect to MongoDB
+if (MONGO_URI) {
+  const options = {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
+    maxPoolSize: 10
+  };
+  
+  MongoClient.connect(MONGO_URI, options)
+    .then(client => {
+      console.log('✅ Connected to MongoDB Atlas');
+      db = client.db('spaced-repetition');
+    })
+    .catch(error => {
+      console.error('❌ MongoDB connection failed:', error.message);
+      console.log('📱 App running in LOCAL MODE (cloud sync disabled)');
+      console.log('🔧 To fix: Check MongoDB Atlas IP whitelist and credentials');
+    });
+} else {
+  console.error('MONGO_URI environment variable not found');
+}
 
 
 // Twilio setup - credentials from environment variables
@@ -106,7 +135,96 @@ app.post('/notify', async (req, res) => {
   }
 });
 
-const path = require('path');
+// Cloud Sync Endpoints with MongoDB
+app.post('/api/sync-to-cloud', async (req, res) => {
+  try {
+    const { email, subjects, contact, timestamp } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    if (!subjects || !Array.isArray(subjects)) {
+      return res.status(400).json({ error: 'Valid subjects array is required' });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Cloud sync temporarily unavailable',
+        message: 'MongoDB connection not available. App is running in local mode.',
+        localMode: true
+      });
+    }
+
+    const userData = {
+      email: email.toLowerCase(),
+      subjects,
+      contact: contact || {},
+      timestamp: timestamp || new Date().toISOString(),
+      lastSync: new Date().toISOString()
+    };
+
+    // Upsert user data (update if exists, insert if not)
+    await db.collection('userdata').replaceOne(
+      { email: email.toLowerCase() },
+      userData,
+      { upsert: true }
+    );
+
+    console.log(`✅ Synced ${subjects.length} subjects to cloud for ${email}`);
+    
+    res.status(200).json({ 
+      message: 'Successfully synced to cloud',
+      subjectCount: subjects.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Sync to cloud error:', error);
+    res.status(500).json({ error: 'Failed to sync to cloud: ' + error.message });
+  }
+});
+
+app.get('/api/load-from-cloud', async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Cloud sync temporarily unavailable',
+        message: 'MongoDB connection not available. App is running in local mode.',
+        localMode: true
+      });
+    }
+
+    const userData = await db.collection('userdata').findOne({ 
+      email: email.toLowerCase() 
+    });
+
+    if (userData) {
+      console.log(`✅ Loaded ${userData.subjects?.length || 0} subjects from cloud for ${email}`);
+      res.status(200).json({
+        subjects: userData.subjects || [],
+        contact: userData.contact || {},
+        timestamp: userData.timestamp,
+        lastSync: userData.lastSync
+      });
+    } else {
+      res.status(200).json({
+        subjects: [],
+        contact: {},
+        message: 'No data found for this email'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Load from cloud error:', error);
+    res.status(500).json({ error: 'Failed to load from cloud: ' + error.message });
+  }
+});
+
 // Serve static files from root (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname, '..')));
 
