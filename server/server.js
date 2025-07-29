@@ -59,7 +59,7 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     mongodb: db ? 'Connected' : 'Disconnected',
-    message: 'Server is running!'
+    message: 'Server is running! v2'
   });
 });
 
