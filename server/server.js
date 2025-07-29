@@ -53,6 +53,15 @@ const SENDER_EMAIL = process.env.SENDER_EMAIL; // Must verify this in SendGrid
 let pendingNotifications = [];
 let completedReviews = [];
 
+// Health check endpoint for Azure debugging
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    mongodb: db ? 'Connected' : 'Disconnected',
+    message: 'Server is running!'
+  });
+});
 
 // Move this route below app initialization
 // Endpoint to save contact info
