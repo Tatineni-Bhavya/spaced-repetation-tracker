@@ -53,6 +53,11 @@ const SENDER_EMAIL = process.env.SENDER_EMAIL; // Must verify this in SendGrid
 let pendingNotifications = [];
 let completedReviews = [];
 
+// Root route to serve index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
 // Health check endpoint for Azure debugging
 app.get('/health', (req, res) => {
   res.json({ 
